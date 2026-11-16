@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bulls and Cows</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #22d3ee;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --blue: #3b82f6;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(180deg, #020617, var(--bg));
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+    .app {
+      width: 100%;
+      max-width: 900px;
+      background: rgba(17, 24, 39, 0.95);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+    h1 {
+      margin: 0 0 8px;
+      text-align: center;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .panel {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    button {
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+    button:hover { filter: brightness(1.1); }
+    button.secondary { background: #475569; }
+    button.danger { background: var(--red); }
+    button.success { background: #16a34a; }
+    input, select {
+      background: #0b1220;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 16px;
+    }
+    input { width: 180px; }
+    .hidden { display: none !important; }
+    .status { margin-top: 10px; min-height: 24px; }
+    .ok { color: var(--green); }
+    .warn { color: var(--yellow); }
+    .err { color: var(--red); }
+    .info { color: var(--accent); }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+    }
+    .stat {
+      background: #0b1220;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .stat .label { color: var(--muted); font-size: 14px; }
+    .stat .value { font-size: 22px; font-weight: bold; margin-top: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px;
+      text-align: left;
+    }
+    th { color: var(--accent); }
+    .bull { color: var(--green); font-weight: bold; }
+    .cow { color: var(--yellow); font-weight: bold; }
+    ul { margin: 8px 0 0 20px; }
+    .footer-note { color: var(--muted); font-size: 14px; margin-top: 8px; }
+    @media (max-width: 600px) {
+      .app { padding: 16px; }
+      input { width: 100%; }
+      .row { flex-direction: column; align-items: stretch; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>BULLS AND COWS</h1>
+    <div class="subtitle">Guess the secret 4-digit number. No repeats, and it never starts with 0.</div>
+
+    <!-- Menu -->
+    <div id="menuPanel" class="panel">
+      <h2>Main Menu</h2>
+      <div class="row">
+        <button id="startBtn" class="success">Start New Game</button>
+        <button id="howBtn" class="secondary">How to Play</button>
+        <button id="statsBtn" class="secondary">View Statistics</button>
+      </div>
+    </div>
+
+    <!-- How to Play -->
+    <div id="howPanel" class="panel hidden">
+      <h2>How to Play</h2>
+      <ul>
+        <li>The computer generates a secret 4-digit number.</li>
+        <li>All digits are different, and the first digit is not 0.</li>
+        <li><span class="bull">Bull</span>: correct digit in the correct position.</li>
+        <li><span class="cow">Cow</span>: correct digit in the wrong position.</li>
+        <li>Win by getting <strong>4 Bulls</strong>.</li>
+      </ul>
+      <p><strong>Example:</strong> Secret = 4271, Guess = 4729 → 1 Bull, 2 Cows.</p>
+      <button id="backFromHowBtn" class="secondary">Back to Menu</button>
+    </div>
+
+    <!-- Stats -->
+    <div id="statsPanel" class="panel hidden">
+      <h2>Session Statistics</h2>
+      <div class="stats-grid">
+        <div class="stat"><div class="label">Games Played</div><div class="value" id="statPlayed">0</div></div>
+        <div class="stat"><div class="label">Games Won</div><div class="value" id="statWon">0</div></div>
+        <div class="stat"><div class="label">Games Lost</div><div class="value" id="statLost">0</div></div>
+        <div class="stat"><div class="label">Best (Fewest Attempts)</div><div class="value" id="statBest">N/A</div></div>
+        <div class="stat"><div class="label">Average Win Attempts</div><div class="value" id="statAvg">N/A</div></div>
+      </div>
+      <div style="margin-top:12px;">
+        <button id="backFromStatsBtn" class="secondary">Back to Menu</button>
+      </div>
+    </div>
+
+    <!-- Setup -->
+    <div id="setupPanel" class="panel hidden">
+      <h2>New Game</h2>
+      <div class="row">
+        <label for="difficulty">Difficulty:</label>
+        <select id="difficulty">
+          <option value="12">Easy (12 attempts)</option>
+          <option value="10" selected>Medium (10 attempts)</option>
+          <option value="8">Hard (8 attempts)</option>
+          <option value="-1">Zen (Unlimited)</option>
+        </select>
+        <button id="beginGameBtn" class="success">Begin</button>
+        <button id="cancelSetupBtn" class="secondary">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Game -->
+    <div id="gamePanel" class="panel hidden">
+      <h2>Game</h2>
+      <div id="gameInfo" class="info"></div>
+      <div class="row" style="margin-top: 10px;">
+        <input id="guessInput" type="text" maxlength="4" placeholder="Enter 4 digits" />
+        <button id="guessBtn" class="success">Submit Guess</button>
+        <button id="giveUpBtn" class="danger">Give Up</button>
+        <button id="menuBtn" class="secondary">Main Menu</button>
+      </div>
+      <div id="status" class="status"></div>
+
+      <h3>Guess History</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Guess</th>
+            <th>Bulls</th>
+            <th>Cows</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+
+      <div id="postGameActions" class="row hidden" style="margin-top: 14px;">
+        <button id="playAgainBtn" class="success">Play Again</button>
+      </div>
+      <div class="footer-note">Tip: Valid guesses have 4 unique digits and do not start with 0.</div>
+    </div>
+  </div>
+
+  <script>
+    // Game state
+    let secret = "";
+    let attempts = 0;
+    let maxAttempts = 10;
+    let gameOver = false;
+    let history = [];
+
+    // Session statistics
+    const stats = {
+      played: 0,
+      won: 0,
+      totalWinAttempts: 0,
+      best: null
+    };
+
+    // Elements
+    const menuPanel = document.getElementById("menuPanel");
+    const howPanel = document.getElementById("howPanel");
+    const statsPanel = document.getElementById("statsPanel");
+    const setupPanel = document.getElementById("setupPanel");
+    const gamePanel = document.getElementById("gamePanel");
+
+    const guessInput = document.getElementById("guessInput");
+    const historyBody = document.getElementById("historyBody");
+    const statusEl = document.getElementById("status");
+    const gameInfo = document.getElementById("gameInfo");
+    const postGameActions = document.getElementById("postGameActions");
+
+    function showPanel(panel) {
+      [menuPanel, howPanel, statsPanel, setupPanel, gamePanel].forEach(p => p.classList.add("hidden"));
+      panel.classList.remove("hidden");
+    }
+
+    function setStatus(message, type = "") {
+      statusEl.textContent = message;
+      statusEl.className = "status " + type;
+    }
+
+    function generateSecret() {
+      const digits = [];
+      // First digit: 1-9
+      digits.push(Math.floor(Math.random() * 9) + 1);
+      while (digits.length < 4) {
+        const d = Math.floor(Math.random() * 10);
+        if (!digits.includes(d)) digits.push(d);
+      }
+      return digits.join("");
+    }
+
+    function isValidGuess(guess) {
+      if (guess.length !== 4) return "Please enter exactly 4 digits.";
+      if (!/^\d{4}$/.test(guess)) return "Only digits (0-9) are allowed.";
+      if (guess[0] === "0") return "The number cannot begin with zero.";
+      const set = new Set(guess.split(""));
+      if (set.size !== 4) return "Repeated digits are not allowed.";
+      return null;
+    }
+
+    function calculateBulls(secretStr, guessStr) {
+      let bulls = 0;
+      for (let i = 0; i < 4; i++) {
+        if (secretStr[i] === guessStr[i]) bulls++;
+      }
+      return bulls;
+    }
+
+    function calculateCows(secretStr, guessStr) {
+      let cows = 0;
+      for (let i = 0; i < 4; i++) {
+        if (secretStr[i] !== guessStr[i] && secretStr.includes(guessStr[i])) {
+          cows++;
+        }
+      }
+      return cows;
+    }
+
+    function updateGameInfo() {
+      const remaining = maxAttempts === -1 ? "Unlimited" : Math.max(0, maxAttempts - attempts);
+      const limitText = maxAttempts === -1 ? "Zen (Unlimited attempts)" : `Attempt limit: ${maxAttempts}`;
+      gameInfo.innerHTML = `<strong>${limitText}</strong> | Attempts used: <strong>${attempts}</strong> | Remaining: <strong>${remaining}</strong>`;
+    }
+
+    function renderHistory() {
+      historyBody.innerHTML = "";
+      history.forEach((h, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td>${h.guess}</td>
+          <td class="bull">${h.bulls}</td>
+          <td class="cow">${h.cows}</td>
+        `;
+        historyBody.appendChild(tr);
+      });
+    }
+
+    function updateStatsUI() {
+      document.getElementById("statPlayed").textContent = stats.played;
+      document.getElementById("statWon").textContent = stats.won;
+      document.getElementById("statLost").textContent = stats.played - stats.won;
+      document.getElementById("statBest").textContent = stats.best === null ? "N/A" : stats.best;
+      if (stats.won > 0) {
+        const avg = (stats.totalWinAttempts / stats.won).toFixed(2);
+        document.getElementById("statAvg").textContent = avg;
+      } else {
+        document.getElementById("statAvg").textContent = "N/A";
+      }
+    }
+
+    function startNewGame() {
+      const diffValue = parseInt(document.getElementById("difficulty").value, 10);
+      maxAttempts = diffValue;
+      secret = generateSecret();
+      attempts = 0;
+      history = [];
+      gameOver = false;
+      stats.played++;
+
+      guessInput.value = "";
+      guessInput.disabled = false;
+      document.getElementById("guessBtn").disabled = false;
+      document.getElementById("giveUpBtn").disabled = false;
+      postGameActions.classList.add("hidden");
+      renderHistory();
+      updateGameInfo();
+      setStatus("A new secret number has been generated. Good luck!", "info");
+      showPanel(gamePanel);
+      guessInput.focus();
+    }
+
+    function endGame(message, type) {
+      gameOver = true;
+      guessInput.disabled = true;
+      document.getElementById("guessBtn").disabled = true;
+      document.getElementById("giveUpBtn").disabled = true;
+      postGameActions.classList.remove("hidden");
+      setStatus(message, type);
+      updateStatsUI();
+    }
+
+    function submitGuess() {
+      if (gameOver) return;
+      const guess = guessInput.value.trim();
+
+      const error = isValidGuess(guess);
+      if (error) {
+        setStatus(error, "err");
+        guessInput.focus();
+        guessInput.select();
+        return;
+      }
+
+      attempts++;
+      const bulls = calculateBulls(secret, guess);
+      const cows = calculateCows(secret, guess);
+      history.push({ guess, bulls, cows });
+      renderHistory();
+      updateGameInfo();
+
+      if (bulls === 4) {
+        stats.won++;
+        stats.totalWinAttempts += attempts;
+        if (stats.best === null || attempts < stats.best) stats.best = attempts;
+        endGame(`Congratulations! You guessed ${secret} in ${attempts} attempt(s).`, "ok");
+      } else if (maxAttempts !== -1 && attempts >= maxAttempts) {
+        endGame(`Game over! You ran out of attempts. The secret number was ${secret}.`, "err");
+      } else {
+        setStatus(`Result: ${bulls} Bull(s), ${cows} Cow(s). Keep going!`, bulls > 0 || cows > 0 ? "warn" : "info");
+      }
+
+      guessInput.value = "";
+      if (!gameOver) guessInput.focus();
+    }
+
+    // Event listeners
+    document.getElementById("startBtn").addEventListener("click", () => showPanel(setupPanel));
+    document.getElementById("howBtn").addEventListener("click", () => showPanel(howPanel));
+    document.getElementById("statsBtn").addEventListener("click", () => { updateStatsUI(); showPanel(statsPanel); });
+    document.getElementById("backFromHowBtn").addEventListener("click", () => showPanel(menuPanel));
+    document.getElementById("backFromStatsBtn").addEventListener("click", () => showPanel(menuPanel));
+    document.getElementById("beginGameBtn").addEventListener("click", startNewGame);
+    document.getElementById("cancelSetupBtn").addEventListener("click", () => showPanel(menuPanel));
+    document.getElementById("guessBtn").addEventListener("click", submitGuess);
+    document.getElementById("playAgainBtn").addEventListener("click", () => showPanel(setupPanel));
+    document.getElementById("menuBtn").addEventListener("click", () => showPanel(menuPanel));
+    document.getElementById("giveUpBtn").addEventListener("click", () => {
+      if (!gameOver) endGame(`You gave up. The secret number was ${secret}.`, "warn");
+    });
+
+    guessInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") submitGuess();
+    });
+
+    // Initialize
+    updateStatsUI();
+    showPanel(menuPanel);
+  </script>
+</body>
+</html>
